@@ -1,6 +1,7 @@
 import { angleOf, distance, length, normalize, scale, sub, add, clamp } from "../math/vec2";
 import type { Vec2 } from "../math/vec2";
 import { SeededRandom } from "../math/random";
+import { DEFAULT_SIM_CONFIG, type SimConfig } from "./config";
 import { attackDirection, type PlayerInput, type SimPlayer, type SimState, type TeamId } from "./types";
 
 /**
@@ -9,6 +10,10 @@ import { attackDirection, type PlayerInput, type SimPlayer, type SimState, type 
  * Utility-style football AI (§46) that produces ordinary PlayerInput — the sim
  * cannot tell a bot from a human. Deliberately imperfect: reaction delay,
  * aim noise and a per-bot "hesitation" so it makes human-like mistakes.
+ *
+ * Side symmetry: decisions are taken in court space and random draws are consumed
+ * in roster order, so a match mirrored in z plays out as an exact reflection
+ * (enforced by balance.test.ts). Keep it that way when adding behaviours.
  */
 export interface BotPersonality {
   /** 0..1 — how aggressively the bot presses/tackles. */
@@ -21,17 +26,28 @@ export interface BotPersonality {
 
 export const DEFAULT_PERSONALITY: BotPersonality = { aggression: 0.5, selfishness: 0.4, reaction: 0.18 };
 
+/** Minimum perpendicular clearance (m) for a bot to consider a lane usable. */
+const PASS_LANE_CLEARANCE = 1.0;
+const SHOT_LANE_CLEARANCE = 0.8;
+
 interface BotMemory {
   nextDecision: number;
   input: PlayerInput;
+  /** Seconds spent charging the current shot, or null when not shooting. */
   shotCharge: number | null;
+  /** Power (0..1) chosen for the current shot. */
+  shotPower: number;
 }
 
 export class BotController {
   private memory = new Map<string, BotMemory>();
   private rng: SeededRandom;
 
-  constructor(seed: number, private personality: BotPersonality = DEFAULT_PERSONALITY) {
+  constructor(
+    seed: number,
+    private personality: BotPersonality = DEFAULT_PERSONALITY,
+    private cfg: SimConfig = DEFAULT_SIM_CONFIG
+  ) {
     this.rng = new SeededRandom(seed ^ 0x9e3779b9);
   }
 
@@ -48,7 +64,7 @@ export class BotController {
   private inputFor(bot: SimPlayer, state: SimState, dt: number): PlayerInput {
     let mem = this.memory.get(bot.id);
     if (!mem) {
-      mem = { nextDecision: 0, input: idle(), shotCharge: null };
+      mem = { nextDecision: 0, input: idle(), shotCharge: null, shotPower: 0 };
       this.memory.set(bot.id, mem);
     }
     mem.nextDecision -= dt;
@@ -57,11 +73,11 @@ export class BotController {
     mem.input = { ...mem.input, pass: false, lob: false, tackle: false };
     delete mem.input.shootPower;
 
-    // Shot charging is continuous, resolved when charge completes.
+    // Shot charging is continuous and takes as long as it would for a human (§21).
     if (mem.shotCharge !== null) {
       mem.shotCharge += dt;
-      if (mem.shotCharge >= this.rng.range(0.25, 0.6)) {
-        const power = clamp(0.55 + mem.shotCharge, 0.55, 1);
+      if (mem.shotCharge >= mem.shotPower * this.cfg.shot.chargeTime) {
+        const power = mem.shotPower;
         mem.shotCharge = null;
         return { ...mem.input, shootPower: power };
       }
@@ -101,11 +117,18 @@ export class BotController {
     const nearestOpp = this.nearestOpponent(bot, state);
     const pressure = nearestOpp ? distance(nearestOpp.pos, bot.pos) : 99;
 
-    // Shoot when in range and the lane isn't blocked, sometimes even when it is.
+    // Shoot when in range and a lane to a post is open — sometimes even when it is not.
     const shootRange = state.court.length * 0.3;
-    if (distGoal < shootRange && (this.laneOpen(bot.pos, goal, state, bot.team) || this.rng.chance(0.1))) {
-      mem.shotCharge = 0;
-      return { move: { x: this.rng.range(-0.6, 0.6), z: 0 }, sprint: false, pass: false, lob: false, tackle: false };
+    if (distGoal < shootRange) {
+      const side = this.openGoalSide(bot.pos, state, bot.team);
+      if (side !== null || this.rng.chance(0.08)) {
+        // Power by distance: blast from close, place from range — full power from far clears the bar.
+        mem.shotPower = clamp(0.9 - (distGoal / shootRange) * 0.4, 0.5, 0.9);
+        mem.shotCharge = 0;
+        // performShot reads placement as shooter-relative stick x; convert the court-space side.
+        const aim = (side ?? 0) * dir * 0.8;
+        return { move: { x: aim, z: 0 }, sprint: false, pass: false, lob: false, tackle: false };
+      }
     }
 
     // Under pressure: pass (unless selfish) to the most advanced open teammate.
@@ -141,30 +164,33 @@ export class BotController {
     const myGoal: Vec2 = { x: 0, z: -(state.court.length / 2) * attackDirection(bot.team) };
     const teammates = state.players.filter((p) => p.team === bot.team);
     const closest = teammates.reduce((a, b) => (distance(a.pos, owner.pos) < distance(b.pos, owner.pos) ? a : b));
+    const toGoal = sub(myGoal, owner.pos);
+    const ballToGoal = length(toGoal);
+    const lane = normalize(toGoal);
 
     if (closest.id === bot.id) {
-      // Press the carrier; tackle when adjacent and feeling aggressive.
+      // Press goal-side: meet the carrier on their path to our goal, leading their velocity, so a
+      // straight sprint from kickoff runs into the defender instead of away from them.
       const d = distance(bot.pos, owner.pos);
+      const lead = scale(owner.vel, clamp(d / 8, 0, 0.6));
+      const target = add(add(owner.pos, scale(lane, 0.9)), lead);
       const tackle = d < 1.05 && this.rng.chance(0.35 + this.personality.aggression * 0.5);
-      const input = this.moveTo(bot, owner.pos, d > 2.5 && bot.stamina > 20);
+      const input = this.moveTo(bot, target, d > 2.0 && bot.stamina > 20);
       return { ...input, tackle };
     }
 
-    // Last man: the teammate nearest our goal plays sweeper on the ball–goal line, just off the line.
+    // Last man: the teammate nearest our goal holds the ball–goal line just off the goal.
     const others = teammates.filter((p) => p.id !== closest.id);
     const lastMan = others.reduce((a, b) => (distance(a.pos, myGoal) < distance(b.pos, myGoal) ? a : b));
     if (lastMan.id === bot.id) {
-      const toBall = sub(owner.pos, myGoal);
-      const dist = length(toBall);
-      const depth = clamp(dist * 0.25, 1.6, 4.5);
-      const target = add(myGoal, scale(normalize(toBall), depth));
-      return this.moveTo(bot, target, dist < 10);
+      const depth = clamp(ballToGoal * 0.25, 1.6, 4.5);
+      const target = sub(myGoal, scale(lane, depth));
+      return this.moveTo(bot, target, ballToGoal < 10);
     }
 
-    // Others cover the space between the ball and our goal.
-    const cover = add(scale(owner.pos, 0.45), scale(myGoal, 0.55));
-    cover.x += (bot.pos.x > owner.pos.x ? 1 : -1) * 1.5;
-    return this.moveTo(bot, cover, false);
+    // Cover: stand in the shooting lane between carrier and goal — body blocks are real defence (§19, §23).
+    const cover = add(owner.pos, scale(lane, clamp(ballToGoal * 0.4, 2.5, 7)));
+    return this.moveTo(bot, cover, ballToGoal < 12);
   }
 
   private chaseLoose(bot: SimPlayer, ball: Vec2, state: SimState): PlayerInput {
@@ -204,18 +230,37 @@ export class BotController {
     return best;
   }
 
-  private laneOpen(from: Vec2, to: Vec2, state: SimState, team: TeamId): boolean {
+  /** Smallest perpendicular distance of an opponent to the segment from→to (Infinity if none). */
+  private laneClearance(from: Vec2, to: Vec2, state: SimState, team: TeamId): number {
     const dir = normalize(sub(to, from));
     const len = distance(from, to);
+    let clearance = Infinity;
     for (const p of state.players) {
       if (p.team === team) continue;
       const rel = sub(p.pos, from);
       const along = rel.x * dir.x + rel.z * dir.z;
       if (along < 0 || along > len) continue;
       const perp = Math.abs(rel.x * dir.z - rel.z * dir.x);
-      if (perp < 1.0) return false;
+      if (perp < clearance) clearance = perp;
     }
-    return true;
+    return clearance;
+  }
+
+  private laneOpen(from: Vec2, to: Vec2, state: SimState, team: TeamId): boolean {
+    return this.laneClearance(from, to, state, team) >= PASS_LANE_CLEARANCE;
+  }
+
+  /**
+   * Court-space side (-1 | 1) of the goal whose post lane is clearer, or null when both are
+   * blocked. Ties go to +x, which keeps the choice identical in a mirrored court.
+   */
+  private openGoalSide(from: Vec2, state: SimState, team: TeamId): -1 | 1 | null {
+    const goalZ = (state.court.length / 2) * attackDirection(team);
+    const postX = (state.court.goalWidth / 2) * this.cfg.shot.placementRange;
+    const left = this.laneClearance(from, { x: -postX, z: goalZ }, state, team);
+    const right = this.laneClearance(from, { x: postX, z: goalZ }, state, team);
+    if (Math.max(left, right) < SHOT_LANE_CLEARANCE) return null;
+    return right >= left ? 1 : -1;
   }
 
   private bestPassOption(bot: SimPlayer, state: SimState): SimPlayer | null {

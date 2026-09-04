@@ -63,7 +63,9 @@ export function performPass(
   }
 
   const err = mix(cfg.pass.errorMin, cfg.pass.errorMax, passer.attributes.pass);
-  dirAngle += rng.range(-err, err);
+  // Noise is expressed relative to the attacking direction so a court mirrored in z plays out as an
+  // exact reflection (side symmetry, see balance.test.ts). The distribution is unchanged.
+  dirAngle += rng.range(-err, err) * attackDirection(passer.team);
 
   let speed = clamp(dist * cfg.pass.speedPerMetre, cfg.pass.speedMin, cfg.pass.speedMax);
   let vy = 0;
@@ -102,7 +104,7 @@ export function performShot(
   let dirAngle = angleOf({ x: aimX - shooter.pos.x, z: goalZ - shooter.pos.z });
   const err = mix(cfg.shot.errorMin, cfg.shot.errorMax, shooter.attributes.shot);
   // More power = less precision.
-  dirAngle += rng.range(-err, err) * (0.6 + power * 0.8);
+  dirAngle += rng.range(-err, err) * (0.6 + power * 0.8) * dirZ; // team-relative: side symmetry
 
   const speed = mix(cfg.shot.speedMin, cfg.shot.speedMax, power) * mix(0.9, 1.1, shooter.attributes.shot);
   const lift = mix(cfg.shot.liftMin, cfg.shot.liftMax, power);

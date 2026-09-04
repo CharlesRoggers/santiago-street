@@ -4,6 +4,12 @@
  *
  * Tuning philosophy (§17): arcade-responsive, not simulation-realistic.
  */
+/** One kickoff slot: x in court space (same for both teams), depth in metres into own half. */
+export interface FormationSlot {
+  x: number;
+  depth: number;
+}
+
 export interface SimConfig {
   /** Fixed simulation step in seconds. 60 Hz keeps input latency ≤ 16 ms. */
   fixedDt: number;
@@ -91,7 +97,8 @@ export interface SimConfig {
   shot: {
     speedMin: number;
     speedMax: number;
-    /** Vertical velocity share at low and high power. */
+    /** Vertical velocity share at low and high power. At full power the ball clears the bar from
+   * beyond ~7 m, so range shots must trade power for placement (§21). */
     liftMin: number;
     liftMax: number;
     /** Placement: how far from goal centre the aim can move (fraction of half goal width). */
@@ -120,6 +127,13 @@ export interface SimConfig {
     goalCelebrationTime: number;
     /** Ball is reset if it leaves play (open courts) after this long. */
     outOfPlayReset: number;
+  };
+
+  kickoff: {
+    /** Kickoff team by slot, taker first: centre, a short-pass option, a deep man. */
+    attackShape: FormationSlot[];
+    /** Defending team by slot: presser on the centre line, cover in the lane, last man. */
+    defendShape: FormationSlot[];
   };
 }
 
@@ -185,7 +199,7 @@ export const DEFAULT_SIM_CONFIG: SimConfig = {
     speedMin: 12,
     speedMax: 26,
     liftMin: 0.05,
-    liftMax: 0.22,
+    liftMax: 0.3,
     placementRange: 0.9,
     errorMin: 0.22,
     errorMax: 0.06,
@@ -206,5 +220,18 @@ export const DEFAULT_SIM_CONFIG: SimConfig = {
     kickoffDelay: 1.2,
     goalCelebrationTime: 2.5,
     outOfPlayReset: 1.5
+  },
+
+  kickoff: {
+    attackShape: [
+      { x: 0, depth: 1.2 },
+      { x: -4.5, depth: 4.5 },
+      { x: 4, depth: 9 }
+    ],
+    defendShape: [
+      { x: 0, depth: 5.5 },
+      { x: 3, depth: 9.5 },
+      { x: -1.5, depth: 13 }
+    ]
   }
 };

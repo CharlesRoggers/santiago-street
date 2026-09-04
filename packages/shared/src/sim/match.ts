@@ -295,12 +295,13 @@ export class MatchSimulation {
       const dir = team === "A" ? 1 : -1; // A defends -z, attacks +z
       const list = byTeam[team];
       const n = list.length;
+      // Authored 3v3 shapes (config.kickoff); slots beyond the shape (4v4, 5v5) spread across own half.
+      const shape = team === kickoffTeam ? this.cfg.kickoff.attackShape : this.cfg.kickoff.defendShape;
       list.forEach((p, i) => {
-        // Kickoff taker (index 0) stands near centre; others spread across own half.
-        const isTaker = i === 0 && team === kickoffTeam;
-        const depth = isTaker ? 1.2 : halfL * (0.3 + 0.5 * (i / Math.max(1, n - 1)));
-        const spreadX = n > 1 ? ((i / (n - 1)) - 0.5) * court.width * 0.6 : 0;
-        p.pos = { x: isTaker ? 0 : spreadX, z: -dir * depth };
+        const slot = shape[i];
+        const depth = slot ? slot.depth : halfL * (0.3 + 0.5 * (i / Math.max(1, n - 1)));
+        const spreadX = n > 1 ? (i / (n - 1) - 0.5) * court.width * 0.6 : 0;
+        p.pos = { x: slot ? slot.x : spreadX, z: -dir * depth };
         p.vel = { x: 0, z: 0 };
         p.facing = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
         p.hasBall = false;
