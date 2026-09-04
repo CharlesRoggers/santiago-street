@@ -12,7 +12,7 @@ const threeVthree = (): MatchSetup["players"] => [
   { id: "b3", team: "B", isHuman: false }
 ];
 
-const setup = (seed = 42): MatchSetup => ({ court: DEFAULT_COURT, players: threeVthree(), seed });
+const setup = (seed = 42): MatchSetup => ({ court: DEFAULT_COURT, players: threeVthree(), seed, kickoffTeam: "A" });
 
 function runTicks(sim: MatchSimulation, n: number, inputs: (tick: number) => Map<string, PlayerInput> = () => new Map()) {
   const all = [];

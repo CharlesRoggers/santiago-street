@@ -34,6 +34,8 @@ export interface MatchSetup {
   players: PlayerSpec[];
   seed: number;
   config?: SimConfig;
+  /** Team that takes the opening kickoff. Omit for a seeded coin toss (fair by construction). */
+  kickoffTeam?: TeamId;
 }
 
 export const DEFAULT_COURT: CourtDimensions = {
@@ -92,18 +94,22 @@ export class MatchSimulation {
       assistCandidateId: null
     };
 
+    // Opening kickoff: explicit (tests, rematches) or a seeded coin toss so neither side is
+    // structurally favoured. Previously team A always kicked off (see balance.test.ts).
+    const kickoffTeam: TeamId = setup.kickoffTeam ?? (this.rng.chance(0.5) ? "A" : "B");
+
     const match: MatchState = {
       phase: "KICKOFF",
       clock: 0,
       phaseTimer: this.cfg.match.kickoffDelay,
       score: { A: 0, B: 0 },
-      kickoffTeam: "A",
+      kickoffTeam,
       winner: null,
       tick: 0
     };
 
     this.state = { court: setup.court, rules, players, ball, match };
-    this.placeForKickoff("A");
+    this.placeForKickoff(kickoffTeam);
   }
 
   get dt(): number {
