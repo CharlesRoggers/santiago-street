@@ -12,11 +12,24 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const PORT = 4173;
 
+// Hard watchdog: CI must never hang on this script.
+const WATCHDOG_MS = 120_000;
+const watchdog = setTimeout(() => {
+  console.error(`smoke: timed out after ${WATCHDOG_MS / 1000}s`);
+  shutdown(1);
+}, WATCHDOG_MS);
+
 const server = spawn("npx", ["vite", "preview", "--port", String(PORT), "--strictPort"], {
   cwd: path.join(root, "packages/client"),
-  stdio: "pipe"
+  stdio: "pipe",
+  detached: true // own process group so we can kill vite, not just the npx wrapper
 });
-await new Promise((r) => setTimeout(r, 2500));
+function shutdown(code) {
+  clearTimeout(watchdog);
+  try { process.kill(-server.pid, "SIGTERM"); } catch { /* already gone */ }
+  process.exit(code);
+}
+await waitForServer(`http://localhost:${PORT}/`, 30_000);
 
 const errors = [];
 try {
@@ -48,12 +61,26 @@ try {
     await page.close();
   }
   await browser.close();
-} finally {
-  server.kill();
+} catch (e) {
+  console.error("smoke failed:", e);
+  shutdown(1);
 }
 
 if (errors.length) {
   console.error("Console errors:\n" + errors.join("\n"));
-  process.exit(1);
+  shutdown(1);
 }
 console.info("smoke OK");
+shutdown(0);
+
+async function waitForServer(url, timeoutMs) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return;
+    } catch { /* not up yet */ }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  throw new Error(`preview server did not start within ${timeoutMs / 1000}s`);
+}
