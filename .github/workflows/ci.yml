@@ -1,7 +1,6 @@
 name: CI
 on:
-  push: { branches: [main] }
-  pull_request:
+  push: # every branch — this machine cannot run Node, so CI is the verifier before merging to main
 jobs:
   check:
     runs-on: ubuntu-latest
