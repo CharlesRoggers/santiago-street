@@ -1,0 +1,22 @@
+{
+  "hud.move": "moverse",
+  "hud.sprint": "sprint",
+  "hud.pass": "pase",
+  "hud.lob": "globo",
+  "hud.shoot_hold": "tiro (mantener)",
+  "hud.tackle": "quite",
+  "hud.switch": "cambiar jugador",
+  "hud.money": "PESOS*",
+  "hud.reputation": "REPUTACIÓN",
+  "hud.offline_note": "Partido offline: las recompensas se muestran pero no se guardan. El servidor autoritativo las calculará en línea.",
+  "hud.play_again": "JUGAR DE NUEVO",
+  "status.offline": "OFFLINE",
+  "status.prototype": "PROTOTIPO",
+  "banner.kickoff": "¡A JUGAR!",
+  "banner.goal": "¡GOL!",
+  "banner.own_goal": "AUTOGOL",
+  "banner.match_end": "FIN DEL PARTIDO",
+  "result.win": "¡GANASTE!",
+  "result.loss": "PERDISTE",
+  "result.draw": "EMPATE"
+}

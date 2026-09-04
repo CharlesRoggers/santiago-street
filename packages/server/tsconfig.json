@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    
+    "noEmit": true,
+    "paths": { "@ss/shared": ["../shared/src/index.ts"] }
+  },
+  "include": ["src/**/*.ts", "tsup.config.ts"]
+}

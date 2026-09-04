@@ -1,0 +1,12 @@
+{
+  "id": "court.plaza-del-cerro",
+  "districtId": "district.la-cancha",
+  "nameKey": "court.plaza_del_cerro.name",
+  "dimensions": { "width": 20, "length": 32, "goalWidth": 3, "goalHeight": 1.8, "wallHeight": 3 },
+  "surface": "ASPHALT",
+  "position": { "x": 0, "y": 0, "z": 0 },
+  "yaw": 0,
+  "hasLights": true,
+  "baseLevel": 1,
+  "tags": ["main", "hub", "night"]
+}

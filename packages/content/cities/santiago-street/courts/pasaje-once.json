@@ -1,0 +1,12 @@
+{
+  "id": "court.pasaje-once",
+  "districtId": "district.la-cancha",
+  "nameKey": "court.pasaje_once.name",
+  "dimensions": { "width": 16, "length": 26, "goalWidth": 2.6, "goalHeight": 1.7, "wallHeight": 2.4 },
+  "surface": "CONCRETE",
+  "position": { "x": 140, "y": 4, "z": -90 },
+  "yaw": 0.35,
+  "hasLights": false,
+  "baseLevel": 2,
+  "tags": ["secondary", "hidden"]
+}

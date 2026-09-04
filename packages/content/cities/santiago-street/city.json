@@ -1,0 +1,7 @@
+{
+  "id": "city.santiago-street",
+  "nameKey": "city.santiago_street.name",
+  "countryCode": "CL",
+  "metroBrandKey": "metro.brand.linea_urbana",
+  "districtIds": ["district.la-cancha"]
+}

@@ -1,0 +1,22 @@
+{
+  "hud.move": "move",
+  "hud.sprint": "sprint",
+  "hud.pass": "pass",
+  "hud.lob": "lob",
+  "hud.shoot_hold": "shoot (hold)",
+  "hud.tackle": "tackle",
+  "hud.switch": "switch player",
+  "hud.money": "CASH*",
+  "hud.reputation": "REPUTATION",
+  "hud.offline_note": "Offline match: rewards are shown but not saved. The authoritative server will compute them online.",
+  "hud.play_again": "PLAY AGAIN",
+  "status.offline": "OFFLINE",
+  "status.prototype": "PROTOTYPE",
+  "banner.kickoff": "KICK OFF!",
+  "banner.goal": "GOAL!",
+  "banner.own_goal": "OWN GOAL",
+  "banner.match_end": "FULL TIME",
+  "result.win": "YOU WIN!",
+  "result.loss": "YOU LOSE",
+  "result.draw": "DRAW"
+}

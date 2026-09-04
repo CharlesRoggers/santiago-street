@@ -1,0 +1,8 @@
+{
+  "id": "metro.station.la-cancha",
+  "districtId": "district.la-cancha",
+  "nameKey": "metro.station.la_cancha.name",
+  "lineId": "metro.line.naranja",
+  "position": { "x": -60, "y": 0, "z": 40 },
+  "discoveredByDefault": true
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@ss/content",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Game content as data: cities, districts, courts, metro, cosmetics, events. Validated against @ss/shared schemas.",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "build": "echo content has no build step"
+  },
+  "dependencies": { "@ss/shared": "workspace:*" },
+  "devDependencies": { "typescript": "^5.7.2", "vitest": "^2.1.8" }
+}

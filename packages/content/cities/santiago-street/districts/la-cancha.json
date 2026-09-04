@@ -1,0 +1,9 @@
+{
+  "id": "district.la-cancha",
+  "cityId": "city.santiago-street",
+  "nameKey": "district.la_cancha.name",
+  "requiredTier": "BARRIO",
+  "courtIds": ["court.plaza-del-cerro", "court.pasaje-once"],
+  "metroStationIds": ["metro.station.la-cancha"],
+  "cellIds": ["cell.0.0", "cell.0.1", "cell.1.0", "cell.1.1"]
+}

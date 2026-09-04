@@ -1,0 +1,28 @@
+{
+  "name": "@ss/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.cjs",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@colyseus/schema": "^2.0.36",
+    "@colyseus/ws-transport": "^0.15.0",
+    "@ss/shared": "workspace:*",
+    "colyseus": "^0.15.17",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "colyseus.js": "^0.15.28",
+    "tsup": "^8.5.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
